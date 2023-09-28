@@ -51,6 +51,7 @@ async function auth(req: Request, res: Response, next: NextFunction) {
     if (user) {
       const reqUser = JSON.parse(JSON.stringify(user));
       delete reqUser.password;
+      console.log(reqUser);
       (req as CustomRequest).user = reqUser;
       next();
     } else {
@@ -129,6 +130,76 @@ app.post("/login", async (req: Request, res: Response) => {
 app.get("/user", auth, async (req: CustomRequest, res: Response) => {
   res.json(req.user);
 });
+
+app.get("/groups", auth, async (req: CustomRequest, res: Response) => {
+  const groups = await prisma.group.findMany({
+    where: {
+      userId: req.user.id,
+    },
+  });
+  res.json(groups);
+});
+
+app.post("/groups/add", auth, async (req: CustomRequest, res: Response) => {
+  const group = await prisma.group.create({
+    data: {
+      userId: req.user.id,
+      name: req.body.name,
+    },
+  });
+  res.json(group);
+});
+
+app.delete(
+  "/groups/delete",
+  auth,
+  async (req: CustomRequest, res: Response) => {
+    const group = await prisma.group.delete({
+      where: {
+        id: req.body.id,
+      },
+    });
+    res.json(group);
+  }
+);
+
+app.get("/groups/tasks", auth, async (req: CustomRequest, res: Response) => {
+  const tasks = await prisma.task.findMany({
+    where: {
+      userId: req.user.id,
+      groupId: req.body.groupId,
+    },
+  });
+  res.json(tasks);
+});
+
+app.post(
+  "/groups/tasks/add",
+  auth,
+  async (req: CustomRequest, res: Response) => {
+    const task = await prisma.task.create({
+      data: {
+        userId: req.user.id,
+        name: req.body.name,
+        groupId: req.body.groupId,
+      },
+    });
+    res.json(task);
+  }
+);
+
+app.delete(
+  "/groups/tasks/delete",
+  auth,
+  async (req: CustomRequest, res: Response) => {
+    const task = await prisma.task.delete({
+      where: {
+        id: req.body.id,
+      },
+    });
+    res.json(task);
+  }
+);
 
 app.listen(3000, () => {
   console.log("Listening on http://localhost:3000/");

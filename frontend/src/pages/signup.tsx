@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
@@ -9,6 +9,14 @@ export default function Page() {
   const passwordRef: React.RefObject<HTMLInputElement> = useRef(null);
 
   const navigate = useNavigate();
+
+  const token = localStorage.getItem("token");
+
+  useEffect(() => {
+    if (token) {
+      navigate("/");
+    }
+  }, [token, navigate]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,7 +41,7 @@ export default function Page() {
       );
       if (!data.error) {
         localStorage.setItem("token", data.token);
-        navigate("/~");
+        navigate("/");
       }
     }
   }
@@ -46,11 +54,17 @@ export default function Page() {
         <label htmlFor="email">Last Name</label>
         <input ref={firstNameRef} placeholder="Doe" name="last-name" />
         <label htmlFor="email">Email</label>
-        <input ref={emailRef} placeholder="example@xyz.com" name="email" />
+        <input
+          ref={emailRef}
+          placeholder="Enter your email"
+          type="email"
+          name="email"
+        />
         <label htmlFor="password">Password</label>
         <input
           ref={passwordRef}
-          placeholder="example@xyz.com"
+          placeholder="Enter your password"
+          type="password"
           name="password"
         />
         <button type="submit" className="underline hover:no-underline">
