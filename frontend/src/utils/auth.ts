@@ -12,6 +12,10 @@ export default async function auth() {
   });
 
   if (data.error) {
+    if (data.error == "User invalid.") {
+      localStorage.removeItem("token");
+      return null;
+    }
     throw new Error(data.error);
   }
 
