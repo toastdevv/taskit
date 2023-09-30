@@ -14,9 +14,12 @@ const app = express();
 
 const prisma = new PrismaClient();
 
+const PORT = process.env.PORT || 3000;
+const FE_PORT = process.env.FE_PORT || 3000;
+
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:3000"],
+    origin: ["http://localhost:" + FE_PORT, "http://localhost:" + PORT],
   })
 );
 
@@ -334,6 +337,6 @@ app.delete("/tasks/:id", auth, async (req: CustomRequest, res: Response) => {
   }
 });
 
-app.listen(3000, () => {
-  console.log("Listening on http://localhost:3000/");
+app.listen(PORT, () => {
+  console.log("Listening on http://localhost:" + PORT + "/");
 });
