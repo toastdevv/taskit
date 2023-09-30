@@ -4,7 +4,7 @@ import { IoClose } from "react-icons/io5";
 import axios from "axios";
 
 interface Task {
-  id: number;
+  id: string;
   name: string;
   done: boolean;
 }
@@ -12,7 +12,7 @@ interface Task {
 export default function Page() {
   const { groupId } = useParams();
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const newTaskRef = useRef<HTMLInputElement>(null);
@@ -51,18 +51,42 @@ export default function Page() {
   }, [groupId]);
 
   if (loading) {
-    return <h1>Loading...</h1>;
+    return (
+      <div className="h-full w-full bg-gray-50 flex flex-col items-center">
+        <div className="w-[28rem] h-full relative">
+          <h1 className="text-5xl font-semibold pt-12 pb-10">Loading...</h1>
+          {Array(3)
+            .fill(1)
+            .map((_, i) => (
+              <Task
+                key={i}
+                id={""}
+                name={"..."}
+                onCheck={handleTaskCheck}
+                onDelete={handleTaskDelete}
+              />
+            ))}
+        </div>
+      </div>
+    );
   }
 
   if (error) {
     throw <h1>{error}</h1>;
   }
 
-  async function handleTaskCheck(id: number) {
-    const { data } = await axios.put(
-      "http://localhost:3000/tasks/check",
+  async function handleTaskCheck(id: string) {
+    const copyTasks = tasks.map((task) => {
+      if (task.id == id) {
+        return { ...task, done: !task.done };
+      }
+      return task;
+    });
+    setTasks(copyTasks);
+    await axios.put(
+      "http://localhost:3000/tasks",
       {
-        taskId: id,
+        id: id,
       },
       {
         headers: {
@@ -70,20 +94,13 @@ export default function Page() {
         },
       }
     );
-    const copyTasks = tasks.map((task) => {
-      console.log(task.id == data.id);
-      if (task.id == data.id) {
-        return { ...task, done: data.done };
-      }
-      return task;
-    });
-    setTasks(copyTasks);
   }
 
-  async function handleTaskAdd() {
+  async function handleTaskAdd(e: React.FormEvent) {
+    e.preventDefault();
     if (newTaskRef.current) {
       const { data } = await axios.post(
-        "http://localhost:3000/tasks/add",
+        "http://localhost:3000/tasks",
         {
           name: newTaskRef.current.value,
           groupId: groupId,
@@ -106,63 +123,73 @@ export default function Page() {
     }
   }
 
-  async function handleTaskDelete(id: number) {
-    const { data } = await axios.delete("http://localhost:3000/tasks/delete", {
-      data: {
-        id: id,
-      },
+  async function handleTaskDelete(id: string) {
+    const copyTasks = tasks.filter((task) => task.id != id);
+    setTasks(copyTasks);
+    await axios.delete("http://localhost:3000/tasks/" + id, {
       headers: {
         Authorization: localStorage.getItem("token"),
       },
     });
-    const copyTasks = tasks.filter((task) => task.id != data.id);
-    setTasks(copyTasks);
   }
 
   return (
     <div className="h-full w-full bg-gray-50 flex flex-col items-center">
-      <div className="w-[28rem] h-full relative">
-        <h1 className="text-5xl font-semibold pt-12 pb-10">{groupName}</h1>
-        {tasks
-          .filter((task) => !task.done)
-          .map((task) => (
-            <Task
-              key={task.id}
-              id={task.id}
-              name={task.name}
-              onCheck={handleTaskCheck}
-              onDelete={handleTaskDelete}
-            />
-          ))}
-        <h1 className="text-xl font-semibold py-4 text-black text-opacity-50">
-          Finished
-        </h1>
-        {tasks
-          .filter((task) => task.done)
-          .map((task) => (
-            <Task
-              key={task.id}
-              id={task.id}
-              name={task.name}
-              done
-              onCheck={handleTaskCheck}
-              onDelete={handleTaskDelete}
-            />
-          ))}
-        <div className="absolute bottom-0 w-full flex flex-row items-center justify-evenly py-2">
-          <input
-            type="text"
-            placeholder="Add a new task"
-            className="border-2 border-black p-1"
-            ref={newTaskRef}
-          />
-          <button
-            type="submit"
-            className="underline hover:no-underline"
-            onClick={handleTaskAdd}
+      <div className="w-[28rem] h-full flex flex-col">
+        <div className="w-[28rem] h-full overflow-auto flex-shrink">
+          <h1 className="text-5xl font-semibold pt-12 pb-10">{groupName}</h1>
+          {tasks.length > 0 ? (
+            <>
+              {tasks
+                .filter((task) => !task.done)
+                .map((task) => (
+                  <Task
+                    key={task.id}
+                    id={task.id}
+                    name={task.name}
+                    onCheck={handleTaskCheck}
+                    onDelete={handleTaskDelete}
+                  />
+                ))}
+              {tasks.filter((task) => task.done).length > 0 ? (
+                <h1 className="text-xl font-semibold py-4 text-black text-opacity-50">
+                  Finished
+                </h1>
+              ) : null}
+              {tasks
+                .filter((task) => task.done)
+                .map((task) => (
+                  <Task
+                    key={task.id}
+                    id={task.id}
+                    name={task.name}
+                    done
+                    onCheck={handleTaskCheck}
+                    onDelete={handleTaskDelete}
+                  />
+                ))}
+            </>
+          ) : (
+            <h1 className="text-xl font-semibold py-4 text-black text-opacity-50">
+              No tasks were added yet
+            </h1>
+          )}
+        </div>
+        <div className="h-auto bottom-0 w-full py-2">
+          <form
+            className="w-full flex flex-row items-center justify-evenly "
+            onSubmit={handleTaskAdd}
           >
-            Add
-          </button>
+            <input
+              type="text"
+              placeholder="Add a new task"
+              className="border-2 border-black p-1"
+              ref={newTaskRef}
+            />
+            <button type="submit" className="underline hover:no-underline">
+              Add
+            </button>
+          </form>
         </div>
       </div>
     </div>
@@ -176,11 +203,11 @@ function Task({
   onCheck,
   onDelete,
 }: {
-  id: number;
+  id: string;
   name: string;
   done?: boolean;
-  onCheck: (id: number) => void;
-  onDelete: (id: number) => void;
+  onCheck: (id: string) => void;
+  onDelete: (id: string) => void;
 }) {
   function handleTaskCheck() {
     onCheck(id);

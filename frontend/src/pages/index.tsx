@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import auth from "../utils/auth";
-import { Link, Outlet, useNavigate } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { IoClose } from "react-icons/io5";
 import axios from "axios";
 
@@ -14,13 +14,13 @@ import axios from "axios";
 // }
 
 interface Group {
-  id: number;
+  id: string;
   name: string;
 }
 
 export default function Page() {
   const [userData, setUserData] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const newGroupRef = useRef<HTMLInputElement>(null);
@@ -28,6 +28,8 @@ export default function Page() {
   const [groups, setGroups] = useState<Array<Group>>([]);
 
   const navigate = useNavigate();
+
+  const location = useLocation().pathname.replace("/", "");
 
   useEffect(() => {
     auth()
@@ -61,17 +63,32 @@ export default function Page() {
   }, []);
 
   if (loading) {
-    return <h1>Loading...</h1>;
+    return (
+      <div className="h-screen w-screen flex flex-row">
+        <div className="h-full w-96 bg-gray-200 flex-shrink-0 border-r-gray-500 border-r-2 relative">
+          <div className="px-8">
+            <h1 className="text-3xl font-semibold pt-8 pb-5">Task Groups</h1>
+            {Array(3)
+              .fill(1)
+              .map((_, i) => (
+                <Group key={i} id={""} name={""} onDelete={handleGroupDelete} />
+              ))}
+          </div>
+        </div>
+        <Outlet />
+      </div>
+    );
   }
 
   if (error) {
     throw <h1>{error}</h1>;
   }
 
-  async function handleGroupAdd() {
+  async function handleGroupAdd(e: React.FormEvent) {
+    e.preventDefault();
     if (newGroupRef.current) {
       const { data } = await axios.post(
-        "http://localhost:3000/groups/add",
+        "http://localhost:3000/groups",
         {
           name: newGroupRef.current.value,
         },
@@ -92,17 +109,21 @@ export default function Page() {
     }
   }
 
-  async function handleGroupDelete(id: number) {
-    const { data } = await axios.delete(
-      "http://localhost:3000/groups/delete/" + id,
-      {
-        headers: {
-          Authorization: localStorage.getItem("token"),
-        },
-      }
-    );
-    const copyGroups = groups.filter((groups) => groups.id != data.id);
+  async function handleGroupDelete(id: string) {
+    const copyGroups = groups.filter((groups) => groups.id != id);
     setGroups(copyGroups);
+    if (id == location) {
+      if (copyGroups.length == 0) {
+        navigate("/");
+      } else {
+        navigate("/" + copyGroups[0].id);
+      }
+    }
+    await axios.delete("http://localhost:3000/groups/" + id, {
+      headers: {
+        Authorization: localStorage.getItem("token"),
+      },
+    });
   }
 
   if (userData) {
@@ -110,32 +131,44 @@ export default function Page() {
 
     return (
       <div className="h-screen w-screen flex flex-row">
-        <div className="h-full w-96 bg-gray-200 flex-shrink-0 border-r-gray-500 border-r-2 relative">
-          <div className="px-8">
+        <div className="h-full w-96 bg-gray-200 flex flex-col flex-shrink-0 border-r-gray-500 border-r-2 relative">
+          <div className="h-full flex-shrink px-8 overflow-auto">
             <h1 className="text-3xl font-semibold pt-8 pb-5">Task Groups</h1>
-            {groups.map((group) => (
-              <Group
-                key={group.id}
-                id={group.id}
-                name={group.name}
-                onDelete={handleGroupDelete}
-              />
-            ))}
+            {groups.length > 0 ? (
+              <>
+                {groups.map((group) => (
+                  <Group
+                    key={group.id}
+                    id={group.id}
+                    name={group.name}
+                    onDelete={handleGroupDelete}
+                  />
+                ))}
+              </>
+            ) : (
+              <h1 className="text-xl font-semibold py-4 text-black text-opacity-50">
+                No groups were added yet
+              </h1>
+            )}
           </div>
-          <div className="absolute bottom-0 w-full flex flex-row items-center justify-evenly py-2">
-            <input
-              type="text"
-              placeholder="Add a new tasks group"
-              className="border-2 border-black p-1"
-              ref={newGroupRef}
-            />
-            <button
-              type="submit"
-              className="underline hover:no-underline"
-              onClick={handleGroupAdd}
+          <div className="h-auto w-full pb-2 flex flex-col items-center justify-center bg-gray-200">
+            <Link to="/logout" className="w-full pl-10">
+              <h1 className="text-xl font-medium py-3">Logout</h1>
+            </Link>
+            <form
+              className="w-full flex flex-row items-center justify-evenly"
+              onSubmit={handleGroupAdd}
             >
-              Add
-            </button>
+              <input
+                type="text"
+                placeholder="Add a new tasks group"
+                className="border-2 border-black p-1"
+                ref={newGroupRef}
+              />
+              <button type="submit" className="underline hover:no-underline">
+                Add
+              </button>
+            </form>
           </div>
         </div>
         <Outlet />
@@ -149,9 +182,9 @@ function Group({
   name,
   onDelete,
 }: {
-  id: number;
+  id: string;
   name: string;
-  onDelete: (id: number) => void;
+  onDelete: (id: string) => void;
 }) {
   function handleTaskDelete() {
     onDelete(id);
