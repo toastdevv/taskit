@@ -46,7 +46,7 @@ export default function Page() {
 
   useEffect(() => {
     axios
-      .get("http://localhost:3000/groups", {
+      .get(import.meta.env.VITE_BACKEND_URL + "/groups", {
         headers: {
           Authorization: localStorage.getItem("token"),
         },
@@ -88,7 +88,7 @@ export default function Page() {
     e.preventDefault();
     if (newGroupRef.current) {
       const { data } = await axios.post(
-        "http://localhost:3000/groups",
+        import.meta.env.VITE_BACKEND_URL + "/groups",
         {
           name: newGroupRef.current.value,
         },
@@ -119,7 +119,7 @@ export default function Page() {
         navigate("/" + copyGroups[0].id);
       }
     }
-    await axios.delete("http://localhost:3000/groups/" + id, {
+    await axios.delete(import.meta.env.VITE_BACKEND_URL + "/groups/" + id, {
       headers: {
         Authorization: localStorage.getItem("token"),
       },

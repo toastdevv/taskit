@@ -22,7 +22,7 @@ export default function Page() {
     const password = passwordRef.current?.value;
     if (email && password) {
       const { data } = await axios.post(
-        "http://localhost:3000" + "/signup",
+        import.meta.env.VITE_BACKEND_URL + "/signup",
         {
           email,
           password,

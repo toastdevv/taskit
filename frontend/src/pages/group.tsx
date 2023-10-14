@@ -22,7 +22,7 @@ export default function Page() {
 
   useEffect(() => {
     axios
-      .get("http://localhost:3000/groups/" + groupId, {
+      .get(import.meta.env.VITE_BACKEND_URL + "/groups/" + groupId, {
         headers: {
           Authorization: localStorage.getItem("token"),
         },
@@ -34,7 +34,7 @@ export default function Page() {
         setError(e);
       });
     axios
-      .get("http://localhost:3000/tasks/" + groupId, {
+      .get(import.meta.env.VITE_BACKEND_URL + "/tasks/" + groupId, {
         headers: {
           Authorization: localStorage.getItem("token"),
         },
@@ -84,7 +84,7 @@ export default function Page() {
     });
     setTasks(copyTasks);
     await axios.put(
-      "http://localhost:3000/tasks",
+      import.meta.env.VITE_BACKEND_URL + "/tasks",
       {
         id: id,
       },
@@ -100,7 +100,7 @@ export default function Page() {
     e.preventDefault();
     if (newTaskRef.current) {
       const { data } = await axios.post(
-        "http://localhost:3000/tasks",
+        import.meta.env.VITE_BACKEND_URL + "/tasks",
         {
           name: newTaskRef.current.value,
           groupId: groupId,
@@ -126,7 +126,7 @@ export default function Page() {
   async function handleTaskDelete(id: string) {
     const copyTasks = tasks.filter((task) => task.id != id);
     setTasks(copyTasks);
-    await axios.delete("http://localhost:3000/tasks/" + id, {
+    await axios.delete(import.meta.env.VITE_BACKEND_URL + "/tasks/" + id, {
       headers: {
         Authorization: localStorage.getItem("token"),
       },
