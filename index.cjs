@@ -1,42 +1,37 @@
-import * as dotenv from "dotenv";
-dotenv.config();
-import type { NextFunction, Request, Response } from "express";
-import { PrismaClient, User } from "@prisma/client";
+require("dotenv").config();
+const { PrismaClient } = require("@prisma/client");
 const express = require("express");
+const ViteExpress = require("vite-express");
 const helmet = require("helmet");
 const bodyParser = require("body-parser");
-const cors = require("cors");
-
-import bcrypt from "bcrypt";
-import jwt, { Secret } from "jsonwebtoken";
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 const app = express();
 
 const prisma = new PrismaClient();
 
 const PORT = process.env.PORT || 3000;
-const FE_PORT = process.env.FE_PORT || 3000;
-
-app.use(
-  cors({
-    origin: ["http://localhost:" + FE_PORT, "http://localhost:" + PORT],
-  })
-);
-
-app.use(helmet());
 
 app.use(bodyParser.json());
 
-type token = {
-  id: string;
-  time: number;
-};
-
-interface CustomRequest extends Request {
-  user: User;
+if (process.env.NODE_ENV == "development") {
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          "default-src": ["'self'"],
+          "script-src": ["'self'", "'unsafe-inline'"],
+          "connect-src": "*",
+        },
+      },
+    })
+  );
+} else {
+  app.use(helmet());
 }
 
-async function auth(req: Request, res: Response, next: NextFunction) {
+async function auth(req, res, next) {
   try {
     const token = req.headers.authorization?.replace("Bearer ", "");
 
@@ -46,10 +41,7 @@ async function auth(req: Request, res: Response, next: NextFunction) {
       return;
     }
 
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET as Secret
-    ) as token;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const user = await prisma.user.findFirst({
       where: {
@@ -60,7 +52,7 @@ async function auth(req: Request, res: Response, next: NextFunction) {
     if (user) {
       const reqUser = JSON.parse(JSON.stringify(user));
       delete reqUser.password;
-      (req as CustomRequest).user = reqUser;
+      req.user = reqUser;
       next();
     } else {
       res.status(401).json("User invalid.");
@@ -73,7 +65,9 @@ async function auth(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-app.post("/signup", async (req: Request, res: Response) => {
+const api = express.Router();
+
+api.post("/signup", async (req, res) => {
   try {
     const body = req.body;
     const user = await prisma.user.findFirst({
@@ -98,7 +92,7 @@ app.post("/signup", async (req: Request, res: Response) => {
           id: user.id,
           time: Date.now(),
         },
-        process.env.JWT_SECRET as Secret
+        process.env.JWT_SECRET
       );
 
       const welcomeGroup = await prisma.group.create({
@@ -152,7 +146,7 @@ app.post("/signup", async (req: Request, res: Response) => {
   }
 });
 
-app.post("/login", async (req: Request, res: Response) => {
+api.post("/login", async (req, res) => {
   try {
     const body = req.body;
     const user = await prisma.user.findFirst({
@@ -168,7 +162,7 @@ app.post("/login", async (req: Request, res: Response) => {
               id: user?.id,
               time: Date.now(),
             },
-            process.env.JWT_SECRET as Secret
+            process.env.JWT_SECRET
           ),
         });
       } else {
@@ -188,7 +182,7 @@ app.post("/login", async (req: Request, res: Response) => {
   }
 });
 
-app.get("/user", auth, async (req: CustomRequest, res: Response) => {
+api.get("/user", auth, async (req, res) => {
   try {
     res.json(req.user);
   } catch (e) {
@@ -198,7 +192,7 @@ app.get("/user", auth, async (req: CustomRequest, res: Response) => {
   }
 });
 
-app.get("/groups", auth, async (req: CustomRequest, res: Response) => {
+api.get("/groups", auth, async (req, res) => {
   try {
     const groups = await prisma.group.findMany({
       where: {
@@ -213,7 +207,7 @@ app.get("/groups", auth, async (req: CustomRequest, res: Response) => {
   }
 });
 
-app.get("/groups/:id", auth, async (req: CustomRequest, res: Response) => {
+api.get("/groups/:id", auth, async (req, res) => {
   try {
     const group = await prisma.group.findFirst({
       where: {
@@ -229,7 +223,7 @@ app.get("/groups/:id", auth, async (req: CustomRequest, res: Response) => {
   }
 });
 
-app.post("/groups", auth, async (req: CustomRequest, res: Response) => {
+api.post("/groups", auth, async (req, res) => {
   try {
     const group = await prisma.group.create({
       data: {
@@ -245,7 +239,7 @@ app.post("/groups", auth, async (req: CustomRequest, res: Response) => {
   }
 });
 
-app.delete("/groups/:id", auth, async (req: CustomRequest, res: Response) => {
+api.delete("/groups/:id", auth, async (req, res) => {
   try {
     const group = await prisma.group.delete({
       where: {
@@ -260,7 +254,7 @@ app.delete("/groups/:id", auth, async (req: CustomRequest, res: Response) => {
   }
 });
 
-app.get("/tasks/:id", auth, async (req: CustomRequest, res: Response) => {
+api.get("/tasks/:id", auth, async (req, res) => {
   try {
     const tasks = await prisma.task.findMany({
       where: {
@@ -274,7 +268,7 @@ app.get("/tasks/:id", auth, async (req: CustomRequest, res: Response) => {
   }
 });
 
-app.post("/tasks", auth, async (req: CustomRequest, res: Response) => {
+api.post("/tasks", auth, async (req, res) => {
   try {
     const task = await prisma.task.create({
       data: {
@@ -291,7 +285,7 @@ app.post("/tasks", auth, async (req: CustomRequest, res: Response) => {
   }
 });
 
-app.put("/tasks", auth, async (req: CustomRequest, res: Response) => {
+api.put("/tasks", auth, async (req, res) => {
   try {
     const prevTask = await prisma.task.findFirst({
       where: {
@@ -316,12 +310,12 @@ app.put("/tasks", auth, async (req: CustomRequest, res: Response) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({
-      error: "Something wrnt wrong.",
+      error: "Something went wrong.",
     });
   }
 });
 
-app.delete("/tasks/:id", auth, async (req: CustomRequest, res: Response) => {
+api.delete("/tasks/:id", auth, async (req, res) => {
   try {
     const task = await prisma.task.delete({
       where: {
@@ -337,6 +331,8 @@ app.delete("/tasks/:id", auth, async (req: CustomRequest, res: Response) => {
   }
 });
 
-app.listen(PORT, () => {
+app.use("/api", api);
+
+ViteExpress.listen(app, PORT, () => {
   console.log("Listening on http://localhost:" + PORT + "/");
 });

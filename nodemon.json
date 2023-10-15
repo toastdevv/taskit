@@ -1,0 +1,12 @@
+{
+  "restartable": "rs",
+  "ignore": [".git", "node_modules/**/node_modules", "*.mjs"],
+  "execMap": {
+    "js": "node --harmony"
+  },
+  "watch": ["nodemon.json", "./", "src", "public", "prisma"],
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "ext": "cjs,js,jsx,ts,tsx"
+}
