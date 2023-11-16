@@ -5,7 +5,7 @@ export default async function auth() {
   if (!token) {
     return null;
   }
-  const { data } = await axios.get("http://localhost:3000" + "/user", {
+  const { data } = await axios.get(import.meta.env.VITE_BACKEND_URL + "/user", {
     headers: {
       Authorization: "Bearer " + token,
     },
