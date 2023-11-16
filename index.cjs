@@ -15,21 +15,17 @@ const PORT = process.env.PORT || 3000;
 
 app.use(bodyParser.json());
 
-if (process.env.NODE_ENV == "development") {
-  app.use(
-    helmet({
-      contentSecurityPolicy: {
-        directives: {
-          "default-src": ["'self'"],
-          "script-src": ["'self'", "'unsafe-inline'"],
-          "connect-src": "*",
-        },
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        "default-src": ["'self'"],
+        "script-src": ["'self'", "'unsafe-inline'"],
+        "connect-src": "*",
       },
-    })
-  );
-} else {
-  app.use(helmet());
-}
+    },
+  })
+);
 
 async function auth(req, res, next) {
   try {
